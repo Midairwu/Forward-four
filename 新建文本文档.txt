@@ -1,0 +1,290 @@
+//cpu
+QStringList getCPUInfo() {
+    QStringList cpuInfoList;
+
+    QProcess process;
+    //process.start("cat",QStringList() <<"/proc/cpuinfo");
+    process.start("lscpu");
+
+    process.waitForFinished(-1);
+
+    QByteArray result = process.readAllStandardOutput();
+    QString cpuInfo(result);
+
+    QStringList lines = cpuInfo.split('\n');
+    for (const QString &line : lines) {
+        if (line.startsWith("Vendor ID:")) {
+           QStringList parts = line.split(":");
+           QString vendor = parts.at(1).trimmed();
+           cpuInfoList << "CPU厂商: " + vendor;
+       } else if (line.startsWith("Model name:")) {
+           QStringList parts = line.split(":");
+           QString model = parts.at(1).trimmed();
+           cpuInfoList << "CPU型号: " + model;
+       } else if (line.startsWith("CPU family:")) {
+           QStringList parts = line.split(":");
+           QString family = parts.at(1).trimmed();
+           cpuInfoList << "CPU家族: " + family;
+       } else if (line.startsWith("CPU max MHz:")) {
+           QStringList parts = line.split(":");
+           QString frequency = parts.at(1).trimmed();
+           cpuInfoList << "原始频率: " + frequency + " MHz";
+       } else if (line.startsWith("Socket(s):")) {
+           QStringList parts = line.split(":");
+           QString sockets = parts.at(1).trimmed();
+           cpuInfoList << "CPU数量: " + sockets;
+       } else if (line.startsWith("Core(s) per socket:")) {
+           QStringList parts = line.split(":");
+           QString coresPerSocket = parts.at(1).trimmed();
+           cpuInfoList << "物理核心数: " + coresPerSocket;
+       } else if (line.startsWith("Thread(s) per core:")) {
+           QStringList parts = line.split(":");
+           QString threadsPerCore = parts.at(1).trimmed();
+           cpuInfoList << "逻辑核心数: " + threadsPerCore;
+       } else if (line.startsWith("L1d cache:")) {
+           QStringList parts = line.split(":");
+           QString l1Cache = parts.at(1).trimmed();
+           cpuInfoList << "一级缓存: " + l1Cache;
+       } else if (line.startsWith("L2 cache:")) {
+           QStringList parts = line.split(":");
+           QString l2Cache = parts.at(1).trimmed();
+           cpuInfoList << "二级缓存: " + l2Cache;
+       } else if (line.startsWith("L3 cache:")) {
+           QStringList parts = line.split(":");
+           QString l3Cache = parts.at(1).trimmed();
+           cpuInfoList << "三级缓存: " + l3Cache;
+       }
+    }
+    return cpuInfoList;
+}
+//内存
+QStringList getMemoryInfo() {
+    QStringList memoryInfoList;
+
+    // Get information using sudo dmidecode -t memory
+    QProcess dmidecodeProcess;
+    dmidecodeProcess.start("sudo", QStringList() << "dmidecode" << "-t" << "memory");
+    dmidecodeProcess.waitForFinished(-1);
+    QString dmidecodeResult = dmidecodeProcess.readAllStandardOutput();
+    if (dmidecodeResult.isEmpty()) {
+        qDebug() << "Unable to retrieve memory information from dmidecode.";
+        return memoryInfoList;
+    }
+
+    QStringList dmidecodeLines = dmidecodeResult.split("\n\t");
+    QString type;
+    QString configuredMemorySpeed;
+    QString brand;
+    QString date;
+    QString locator;
+    QString size;
+    QString memoryTechnology;
+    QString partmember;
+    QString speed;
+    QString totalwidth;
+    QString serialnumber;
+    QString datawidth;
+    QString typedetail;
+    QString moduleManu;
+    QString firmwarversion;
+
+    for (const QString &line : dmidecodeLines) {
+        if (line.startsWith("Type:")) {
+            type = line.mid(6).trimmed();
+        } else if (line.startsWith("Configured Memory Speed:")) {
+            configuredMemorySpeed = line.mid(24).trimmed();
+        } else if (line.startsWith("Manufacturer:")) {
+            brand = line.mid(13).trimmed();
+        } else if (line.startsWith("Date:")) {
+            date = line.mid(5).trimmed();
+        } else if (line.startsWith("Locator:")) {
+            locator = line.mid(8).trimmed();
+        } else if (line.startsWith("Size:")) {
+            size = line.mid(5).trimmed();
+        } else if (line.startsWith("Memory Technology:")) {
+            memoryTechnology = line.mid(18).trimmed();
+        }else if (line.startsWith("Part Number:")) {
+            partmember = line.mid(12).trimmed();
+        }else if (line.startsWith("Speed:")) {
+            speed = line.mid(6).trimmed();
+        }else if (line.startsWith("Total Width:")) {
+            totalwidth = line.mid(12).trimmed();
+        }else if (line.startsWith("Serial Number:")) {
+            serialnumber = line.mid(14).trimmed();
+        }else if (line.startsWith("Data Width:")) {
+            datawidth = line.mid(11).trimmed();
+        }else if (line.startsWith("Type Detail:")) {
+            typedetail = line.mid(8).trimmed();
+        }else if (line.startsWith("Module Manufacturer ID:")) {
+            moduleManu = line.mid(23).trimmed();
+        }else if (line.startsWith("Firmware Version:")) {
+            firmwarversion = line.mid(17).trimmed();
+        }
+    }
+    memoryInfoList << "名称：" + partmember;
+    memoryInfoList << "内存类型：" + type;
+    memoryInfoList << "预设内存频率：" + configuredMemorySpeed;
+    memoryInfoList << "品牌：" + brand;
+    memoryInfoList << "速率：" + speed;
+    memoryInfoList << "总位宽：" + totalwidth;
+    memoryInfoList << "插槽位置：" + locator;
+    memoryInfoList << "单条内存容量：" + size;
+    memoryInfoList << "序列号：" + serialnumber;
+    memoryInfoList << "数据位宽：" + datawidth;
+    memoryInfoList << "类型详情：" + typedetail;
+    memoryInfoList << "制造厂商：" + moduleManu;
+    memoryInfoList << "固件版本：" + firmwarversion;
+    memoryInfoList << "内存颗粒类型：" + memoryTechnology;
+    return memoryInfoList;
+}
+
+//网卡
+QStringList getNetworkInterfacesInfo() {
+    QStringList networkInterfacesInfoList;
+
+    QProcess lshwProcess;
+    lshwProcess.start("lshw", QStringList() << "-C" << "network");
+    lshwProcess.waitForFinished(-1);
+    QString dmidecodeResult = lshwProcess.readAllStandardOutput();
+    if (dmidecodeResult.isEmpty()) {
+        qDebug() << "Unable to retrieve memory information from dmidecode.";
+        return networkInterfacesInfoList;
+    }
+    qDebug()<<"result:"<<dmidecodeResult;
+    QStringList lines = dmidecodeResult.split('\n');
+    QString serial, product, capabilities, vendor, driverversion, driver,latency,bus,autonegotiation,description,broadcast;
+    QString logical,ip,link,port,multicast,size,capacity;
+    for (const QString& line : lines) {
+        if (line.startsWith("       configuration:")) {
+            QStringList parts = line.split(' ');
+            for (const QString &part : parts) {
+                if (part.startsWith("driver=")) {
+                    driver = part.section("=", 1).trimmed();
+                } else if (part.startsWith("driverversion=")) {
+                    driverversion = part.section("=", 1).trimmed();
+                } else if (part.startsWith("autonegotiation=")) {
+                    autonegotiation = part.section("=", 1).trimmed();
+                } else if (part.startsWith("ip=")) {
+                    ip = part.section("=", 1).trimmed();
+                } else if (part.startsWith("broadcast=")) {
+                    link = part.section("=", 1).trimmed();
+                } else if (part.startsWith("broadcast=")) {
+                    multicast = part.section("=", 1).trimmed();
+                } else if (part.startsWith("broadcast=")) {
+                    port = part.section("=", 1).trimmed();
+                } else if (part.startsWith("broadcast=")) {
+                    broadcast = part.section("=", 1).trimmed();
+                }
+
+            }
+        }
+         else if (line.startsWith("       product: ")) {
+            product = line.section("product: ", 1).trimmed();
+        } else if (line.startsWith("       vendor: ")) {
+            vendor = line.section("vendor: ", 1).trimmed();
+        } else if (line.startsWith("       logical name:")) {
+            logical = line.section("logical name: ", 1);
+        } else if (line.startsWith("       description:")) {
+            description = line.section("description: ", 1);
+        } else if (line.startsWith("       serial:")) {
+            serial = line.section("serial: ", 1);
+        } else if (line.startsWith("       bus info:")) {
+            bus = line.section("bus info: ", 1);
+        } else if (line.startsWith("       size:")) {
+            size = line.section("size: ", 1);
+        } else if (line.startsWith("       capabilities:")) {
+            capabilities = line.section("capabilities: ", 1);
+        } else if (line.startsWith("       capacity:")) {
+            capacity = line.section("capacity: ", 1);
+        }
+    }
+
+    // 将显卡信息添加到列表中
+     if (!product.isEmpty()) networkInterfacesInfoList << "名称: " + product;
+     if (!description.isEmpty()) networkInterfacesInfoList << "描述: " + description;
+        //TO DO
+     if (!capabilities.isEmpty()) networkInterfacesInfoList << "功能: " +capabilities;
+     if (!driver.isEmpty()) networkInterfacesInfoList << "驱动: "+driver ;
+     if (!driverversion.isEmpty()) networkInterfacesInfoList << "驱动版本: " +driverversion;
+     if (!logical.isEmpty()) networkInterfacesInfoList << "逻辑名称: " + logical;
+     if (!vendor.isEmpty()) networkInterfacesInfoList << "制造商: " + vendor;
+     if (!serial.isEmpty()) networkInterfacesInfoList << "物理地址: " + serial;
+     if (!broadcast.isEmpty()) networkInterfacesInfoList << "自动协商: " + broadcast;
+     if (!broadcast.isEmpty()) networkInterfacesInfoList << "广播: " + broadcast;
+     if (!ip.isEmpty()) networkInterfacesInfoList << "IP: " + ip;
+     if (!link.isEmpty()) networkInterfacesInfoList << "连接: " + link;
+     if (!multicast.isEmpty()) networkInterfacesInfoList << "组播: " + multicast;
+     if (!port.isEmpty()) networkInterfacesInfoList << "端口: " + port;
+     if (!bus.isEmpty()) networkInterfacesInfoList << "总线信息: " + bus;
+     if (!latency.isEmpty()) networkInterfacesInfoList << "延迟: " + latency;
+     if (!size.isEmpty()) networkInterfacesInfoList << "协商速率: " + size;
+     if (!capacity.isEmpty()) networkInterfacesInfoList << "最大速率: " + capacity;
+
+     qDebug()<<networkInterfacesInfoList;
+
+    return networkInterfacesInfoList;
+}
+//声卡
+QStringList getSoundCardInfo() {
+    QStringList soundCardInfoList;
+    QStringList irqList;
+    QStringList memoryList;
+    QProcess lshwProcess;
+    lshwProcess.start("lshw", QStringList() << "-C" << "network");
+    lshwProcess.waitForFinished(-1);
+    QString dmidecodeResult = lshwProcess.readAllStandardOutput();
+    if (dmidecodeResult.isEmpty()) {
+        qDebug() << "Unable to retrieve memory information from dmidecode.";
+        return soundCardInfoList;
+    }
+    qDebug()<<"result:"<<dmidecodeResult;
+    QStringList lines = dmidecodeResult.split('\n');
+    QString  product, capabilities, vendor, driver,latency,description,irq,memory;
+    for (const QString& line : lines) {
+        if (line.startsWith("       configuration:")) {
+            QStringList parts = line.split(' ');
+            for (const QString &part : parts) {
+                if (part.startsWith("driver=")) {
+                    driver = part.section("=", 1).trimmed();
+                } else if (part.startsWith("latency=")) {
+                    latency = part.section("=", 1).trimmed();
+                }
+
+            }
+        }
+         else if (line.startsWith("       product: ")) {
+            product = line.section("product: ", 1).trimmed();
+        } else if (line.startsWith("       vendor: ")) {
+            vendor = line.section("vendor: ", 1).trimmed();
+        } else if (line.startsWith("       description:")) {
+            description = line.section("description: ", 1);
+        } else if (line.startsWith("       capabilities:")) {
+            capabilities = line.section("capabilities: ", 1);
+        } else if (line.startsWith("       resources:")) {
+            QStringList parts = line.split(' ');
+            for (const QString &part : parts) {
+                if (part.startsWith("irq:")) {
+                    irqList << part.mid(4);
+                } else if (part.startsWith("memory:")) {
+                    memoryList << part.mid(7);
+                }
+            }
+        }
+    }
+    irq = irqList.join(" ");
+    memory = memoryList.join(" ");
+   
+     if (!product.isEmpty()) soundCardInfoList << "名称: " + product;
+     if (!description.isEmpty()) soundCardInfoList << "描述: " + description;
+     if (!vendor.isEmpty()) soundCardInfoList << "制造商: " + vendor;
+        //TO DO
+     if (!capabilities.isEmpty()) soundCardInfoList << "功能: " +capabilities;
+     if (!driver.isEmpty()) soundCardInfoList << "驱动: "+driver ;
+     if (!latency.isEmpty()) soundCardInfoList << "延迟: " +latency;
+     if (!irq.isEmpty()) soundCardInfoList << "中断: " + irq;
+     if (!memory.isEmpty()) soundCardInfoList << "内存地址: " + memory;
+
+
+     qDebug()<<soundCardInfoList;
+    return soundCardInfoList;
+}
